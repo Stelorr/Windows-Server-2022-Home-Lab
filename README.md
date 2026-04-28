@@ -32,3 +32,28 @@ This project demonstrates the deployment and configuration of a localized Window
 ![Banner Pop Up](./images/banner-popup.png)
 
 * **Resource Security:** Managed tiered NTFS and Share permissions to ensure data integrity and the principle of least privilege.
+
+## 🛠️ Technical Challenges & Troubleshooting
+Building this environment required resolving several real-world configuration hurdles. Below are the key issues encountered and the logic used to resolve them.
+
+### 1. The "Invisible" Local Drive
+* **Issue:** During the file sharing phase, the Local Disk (C:) was not appearing in the standard File Explorer view on the Domain Controller.
+* **Diagnostic:** Utilized **Disk Management (`diskmgmt.msc`)** to verify the partition status and health. 
+* **Resolution:** Identified that the drive was hidden due to VM view settings; forced access via the Disk Management console to initialize the `CompanyShare` directory.
+
+### 2. GPO Drive Mapping Failure (The S: Drive)
+* **Issue:** The Windows 11 client successfully joined the domain, but the mapped network drive did not appear in "This PC."
+* **Diagnostic:** Used `net share` on the DC to discover the directory lacked an active SMB share pointer, and `gpupdate /force` on the client showed successful policy application but no visual result.
+* **Resolution:** * Enabled **Advanced Sharing** and configured **SMB/NTFS permissions** for "Domain Users."
+    * Updated the GPO Action from **"Create"** to **"Replace"** to force a refresh of the network drive icon during the user logon sequence.
+    * Adjusted **Windows Defender Firewall** rules to permit File and Printer Sharing (SMB-In) traffic.
+
+### 3. Password Synchronization & Reset
+* **Issue:** User lockout/credential loss during the initial testing phase.
+* **Resolution:** Demonstrated administrative recovery by performing a password reset in **Active Directory Users and Computers (ADUC)** while enforcing the "User must change password at next logon" security standard.
+
+## 📖 How to Replicate
+1.  Deploy a Windows Server 2022 VM and promote to Domain Controller.
+2.  Configure a static IP and DNS for the `lorio.local` forest.
+3.  Deploy a Windows 11 VM and point DNS to the DC's IP.
+4.  Join the Client to the domain and verify GPO propagation.
